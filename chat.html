@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistente Catarina Empreendimentos</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<!-- CORREÇÃO: Adicionadas classes ao body para centrar o conteúdo no ecrã -->
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Container principal que se adapta ao ecrã -->
+    <!-- Em telemóveis: ocupa 100% do ecrã -->
+    <!-- Em ecrãs maiores (md): vira uma janela centralizada -->
+    <div id="chat-container" class="w-full h-full md:h-auto md:max-h-[85vh] md:max-w-lg lg:max-w-xl bg-white md:rounded-2xl shadow-lg flex flex-col">
+        
+        <!-- CABEÇALHO COM O LOGOTIPO -->
+        <div class="p-4 border-b border-gray-200 text-center flex-shrink-0">
+            <img src="Logo_Horizontal_S_Azul_EscritaGrafite.png" alt="Logo da Empresa" class="h-10 w-auto mx-auto">
+        </div>
+
+        <!-- JANELA DE MENSAGENS DO CHAT (ocupa o espaço restante) -->
+        <div id="chat-window" class="flex-grow p-4 sm:p-6 overflow-y-auto">
+            <!-- As mensagens do chat serão inseridas aqui pelo JavaScript -->
+        </div>
+
+        <!-- ÁREA DE DIGITAÇÃO (fixa em baixo) -->
+        <div id="input-area" class="border-t border-gray-200 p-2 sm:p-4 bg-white flex-shrink-0">
+            <div class="flex w-full items-center space-x-2">
+                <input type="text" id="user-input" placeholder="Digite sua pergunta..." class="w-full px-4 py-2 bg-gray-100 border-transparent rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="send-button" class="bg-blue-600 text-white rounded-full p-2 hover:bg-blue-700 transition flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-send"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+        
+            const webhookURL = 'https://hook.us2.make.com/d16vzifn6o9silyje9ffaunx5ddybmqd'; // <<< COLOQUE SUA URL AQUI
+
+            const chatWindow = document.getElementById('chat-window');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+
+            let conversationHistory = [];
+
+            function addMessage(text, sender) {
+                const messageContainer = document.createElement('div');
+                messageContainer.classList.add('flex', 'mb-4', 'w-full');
+                
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('px-4', 'py-2', 'rounded-lg', 'max-w-[85%]');
+                
+                messageElement.style.whiteSpace = 'pre-wrap';
+                messageElement.textContent = text;
+
+                if (sender === 'user') {
+                    messageContainer.classList.add('justify-end');
+                    messageElement.classList.add('bg-blue-600', 'text-white', 'rounded-br-none');
+                } else { // assistant e assistant-typing
+                    messageContainer.classList.add('justify-start');
+                    messageElement.classList.add('bg-gray-200', 'text-gray-800', 'rounded-bl-none');
+                    if (sender === 'assistant-typing') {
+                        messageElement.classList.add('italic');
+                    }
+                }
+
+                messageContainer.appendChild(messageElement);
+                chatWindow.appendChild(messageContainer);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                
+                if (sender !== 'assistant-typing') {
+                    conversationHistory.push({ role: sender, content: text });
+                }
+                return messageContainer;
+            }
+
+            async function sendMessage() {
+                const question = userInput.value.trim();
+                if (!question) return;
+
+                addMessage(question, 'user');
+                userInput.value = '';
+                const typingIndicator = addMessage('Digitando...', 'assistant-typing');
+
+                try {
+                    const response = await fetch(webhookURL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            query: question,
+                            history: conversationHistory.slice(0, -1)
+                        })
+                    });
+
+                    if (!response.ok) {
+                         throw new Error(`Erro na rede: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const answer = data.resposta || "Desculpe, não consegui processar a resposta.";
+                    
+                    const formattedAnswer = answer.replace(/\\n/g, '\n');
+
+                    if (typingIndicator) {
+                        chatWindow.removeChild(typingIndicator);
+                    }
+                    addMessage(formattedAnswer, 'assistant');
+
+                } catch (error) {
+                    console.error('Erro na comunicação com o assistente:', error);
+                    if (typingIndicator && typingIndicator.parentNode === chatWindow) {
+                        chatWindow.removeChild(typingIndicator);
+                    }
+                    addMessage('Ops! Tive um problema para me conectar.', 'assistant');
+                }
+            }
+            
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Limpa a mensagem inicial do HTML e a adiciona via JS para popular a memória
+            chatWindow.innerHTML = '';
+            const initialMessageText = 'Olá! Sou a Catarina Empreendimentos e irei te auxiliar com informações dos nossos empreendimentos. Como posso te ajudar hoje?';
+            addMessage(initialMessageText, 'assistant');
+        });
+    </script>
+
+</body>
+</html>
