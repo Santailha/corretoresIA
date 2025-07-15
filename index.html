@@ -14,7 +14,7 @@
         }
     </style>
     <script>
-        // Configuração para adicionar as cores da sua empresa ao Tailwind CSS
+        // Paleta de cores
         tailwind.config = {
             theme: {
                 extend: {
@@ -74,7 +74,7 @@
         const buttonText = submitButton.querySelector('.button-text');
         const buttonLoader = submitButton.querySelector('.button-loader');
 
-        // --- COLE AQUI A URL DO SEU NOVO WEBHOOK DE LOGIN ---
+        
         const validationWebhookURL = 'https://hook.us2.make.com/y4j5p78ux38n84yxw89oe5gwjr0oosnu';
 
         loginForm.addEventListener('submit', async function(event) {
@@ -101,11 +101,11 @@
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    // *** MUDANÇA IMPORTANTE AQUI ***
+
                     // Guarda a "chave de acesso" no navegador
                     sessionStorage.setItem('isLoggedIn', 'true');
                     
-                    // Redireciona para o chat
+
                     window.location.href = "chat.html";
                 } else {
                     errorMessage.classList.remove('hidden');
